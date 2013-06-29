@@ -356,7 +356,7 @@ void __disable_irq(struct irq_desc *desc, unsigned int irq, bool suspend)
 static int __disable_irq_nosync(unsigned int irq)
 {
 	unsigned long flags;
-	struct irq_desc *desc = irq_get_desc_buslock(irq, &flags);
+	struct irq_desc *desc = irq_get_desc_buslock(irq, &flags, IRQ_GET_DESC_CHECK_GLOBAL);
 
 	if (!desc)
 		return -EINVAL;
@@ -448,7 +448,7 @@ void __enable_irq(struct irq_desc *desc, unsigned int irq, bool resume)
 void enable_irq(unsigned int irq)
 {
 	unsigned long flags;
-	struct irq_desc *desc = irq_get_desc_buslock(irq, &flags);
+	struct irq_desc *desc = irq_get_desc_buslock(irq, &flags, IRQ_GET_DESC_CHECK_GLOBAL);
 
 	if (!desc)
 		return;
@@ -488,7 +488,7 @@ static int set_irq_wake_real(unsigned int irq, unsigned int on)
 int irq_set_irq_wake(unsigned int irq, unsigned int on)
 {
 	unsigned long flags;
-	struct irq_desc *desc = irq_get_desc_buslock(irq, &flags);
+	struct irq_desc *desc = irq_get_desc_buslock(irq, &flags, IRQ_GET_DESC_CHECK_GLOBAL);
 	int ret = 0;
 
 	if (!desc)
@@ -529,7 +529,7 @@ EXPORT_SYMBOL(irq_set_irq_wake);
 int can_request_irq(unsigned int irq, unsigned long irqflags)
 {
 	unsigned long flags;
-	struct irq_desc *desc = irq_get_desc_lock(irq, &flags);
+	struct irq_desc *desc = irq_get_desc_lock(irq, &flags, 0);
 	int canrequest = 0;
 
 	if (!desc)
