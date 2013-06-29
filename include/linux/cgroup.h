@@ -91,7 +91,11 @@ enum {
  * - task->cgroups for a locked task
  */
 
-extern void __css_get(struct cgroup_subsys_state *css, int count);
+static inline void __css_get(struct cgroup_subsys_state *css, int count)
+{
+	atomic_add(count, &css->refcnt);
+}
+
 static inline void css_get(struct cgroup_subsys_state *css)
 {
 	/* We don't need to reference count the root state */
