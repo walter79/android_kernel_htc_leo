@@ -124,6 +124,8 @@
 #define HTCLEO_GPIO_BATTERY_OVER_CHG		147
 #define HTCLEO_GPIO_POWER_USB     		109
 #define HTCLEO_GPIO_USBPHY_3V3_ENABLE		104
+#define HTCLEO_GPIO_USB_ID_PIN                  142/*for LEO USB ID pin*/
+#define HTCLEO_GPIO_USB_ID1_PIN                 36/*for LEO USB ID pin*/
 
 /* Touchscreen */
 #define HTCLEO_GPIO_TS_POWER			160
