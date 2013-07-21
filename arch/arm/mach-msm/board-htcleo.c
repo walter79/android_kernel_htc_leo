@@ -692,6 +692,9 @@ static struct android_usb_platform_data android_usb_pdata = {
 	.products = usb_products,
 	.num_functions = ARRAY_SIZE(usb_functions_all),
 	.functions = usb_functions_all,
+	.fserial_init_string = "tty:modem,tty:autobot,tty:serial,tty:autobot",
+	.nluns = 1,
+	.usb_id_pin_gpio = HTCLEO_GPIO_USB_ID_PIN,
 };
 
 static struct platform_device android_usb_device = {
@@ -1700,6 +1703,12 @@ static void __init qsd8x50_reserve(void)
 	msm_reserve();
 }
 
+static struct resource msm_fb_resources[] = {
+  {
+    .flags  = IORESOURCE_DMA,
+  }
+};
+
 ///////////////////////////////////////////////////////////////////////
 // Init
 ///////////////////////////////////////////////////////////////////////
@@ -1780,6 +1789,22 @@ int __init ram_console_early_init(void);
 #endif
 #endif
 
+static void __init htcleo_allocate_memory_regions(void)
+{
+	unsigned long size;
+
+	size = MSM_FB_SIZE;
+	msm_fb_resources[0].start = MSM_FB_BASE;
+	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
+	pr_info("allocating %lu bytes at 0x%p (0x%lx physical) for fb\n",
+		size, __va(MSM_FB_BASE), (unsigned long) MSM_FB_BASE);
+}
+
+static void __init htcleo_init_early(void)
+{
+	htcleo_allocate_memory_regions();
+}
+
 static void __init htcleo_map_io(void)
 {
 	msm_map_qsd8x50_io();
@@ -1813,4 +1838,5 @@ MACHINE_START(HTCLEO, "htcleo")
 	.init_irq	= msm_init_irq,
 	.init_machine	= htcleo_init,
 	.timer		= &msm_timer,
+	.init_early     = htcleo_init_early
 MACHINE_END
