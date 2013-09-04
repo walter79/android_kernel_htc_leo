@@ -1,6 +1,6 @@
 #
 # Automatically generated make config: don't edit
-# Linux/arm 3.0.84 Kernel Configuration
+# Linux/arm 3.0.91 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -969,7 +969,6 @@ CONFIG_DNS_RESOLVER=y
 # Network testing
 #
 # CONFIG_NET_PKTGEN is not set
-# CONFIG_NET_DROP_MONITOR is not set
 # CONFIG_HAMRADIO is not set
 # CONFIG_CAN is not set
 # CONFIG_IRDA is not set
@@ -979,6 +978,8 @@ CONFIG_BT_SCO=y
 CONFIG_BT_RFCOMM=y
 CONFIG_BT_RFCOMM_TTY=y
 CONFIG_BT_BNEP=y
+# CONFIG_BT_BNEP_MC_FILTER is not set
+# CONFIG_BT_BNEP_PROTO_FILTER is not set
 CONFIG_BT_HIDP=y
 
 #
@@ -995,7 +996,6 @@ CONFIG_BT_HIDP=y
 # CONFIG_BT_HCIVHCI is not set
 # CONFIG_BT_MRVL is not set
 # CONFIG_MSM_BT_POWER is not set
-CONFIG_BT_HID_BRCM=y
 # CONFIG_AF_RXRPC is not set
 CONFIG_FIB_RULES=y
 CONFIG_WIRELESS=y
