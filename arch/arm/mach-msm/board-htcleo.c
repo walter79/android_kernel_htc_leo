@@ -624,7 +624,7 @@ static struct msm_otg_platform_data msm_otg_pdata = {
 	.se1_gating		= SE1_GATING_DISABLE,
 };
 #else
-static int htcleo_phy_init_seq[] ={0x0C, 0x31, 0x30, 0x32, 0x1D, 0x0D, 0x1D, 0x10, -1};
+//static int htcleo_phy_init_seq[] ={0x0C, 0x31, 0x30, 0x32, 0x1D, 0x0D, 0x1D, 0x10, -1};
 
 static struct msm_otg_platform_data msm_otg_pdata = {
 	.phy_init_seq		= htcleo_phy_init_seq,
@@ -1730,10 +1730,6 @@ static void __init htcleo_init(void)
 
 #ifdef CONFIG_SERIAL_MSM_HS
 	msm_device_uart_dm1.dev.platform_data = &msm_uart_dm1_pdata;
-#if 0
-	msm_device_uart_dm1.name = "msm_serial_hs_brcm"; /* for bcm */
-	msm_device_uart_dm1.resource[3].end = 6;
-#endif
 #endif
 
 	config_gpio_table(bt_gpio_table, ARRAY_SIZE(bt_gpio_table));
