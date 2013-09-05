@@ -626,11 +626,11 @@ static struct msm_otg_platform_data msm_otg_pdata = {
 #else
 //static int htcleo_phy_init_seq[] ={0x0C, 0x31, 0x30, 0x32, 0x1D, 0x0D, 0x1D, 0x10, -1};
 
-static struct msm_otg_platform_data msm_otg_pdata = {
-	.phy_init_seq		= htcleo_phy_init_seq,
-	.mode			= USB_PERIPHERAL,
-	.otg_control		= OTG_PHY_CONTROL,
-};
+//static struct msm_otg_platform_data msm_otg_pdata = {
+//	.phy_init_seq		= htcleo_phy_init_seq,
+//	.mode			= USB_PERIPHERAL,
+//	.otg_control		= OTG_PHY_CONTROL,
+//};
 #endif
 
 #if 0
@@ -720,7 +720,7 @@ static void htcleo_add_usb_devices(void)
 	platform_device_register(&rndis_device);
 #endif
 #endif
-	msm_device_otg.dev.platform_data = &msm_otg_pdata;
+//	msm_device_otg.dev.platform_data = &msm_otg_pdata;
 	//msm_device_gadget_peripheral.dev.platform_data = &msm_gadget_pdata;
 	msm_device_gadget_peripheral.dev.parent = &msm_device_otg.dev;
 	usb_gpio_init();
