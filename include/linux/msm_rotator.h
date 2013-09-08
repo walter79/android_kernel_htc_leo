@@ -30,7 +30,7 @@ struct msm_rotator_img_info {
 	unsigned int    dst_y;
 	unsigned char   rotations;
 	int enable;
-	unsigned int  downscale_ratio;
+	unsigned int	downscale_ratio;
 	unsigned int secure;
 };
 
@@ -38,11 +38,9 @@ struct msm_rotator_data_info {
 	int session_id;
 	struct msmfb_data src;
 	struct msmfb_data dst;
-#ifndef CONFIG_MSM_ROTATOR_LEGACY
 	unsigned int version_key;
 	struct msmfb_data src_chroma;
 	struct msmfb_data dst_chroma;
-#endif
 };
 
 struct msm_rot_clocks {
@@ -58,4 +56,3 @@ struct msm_rotator_platform_data {
 	const char *regulator_name;
 };
 #endif
-
