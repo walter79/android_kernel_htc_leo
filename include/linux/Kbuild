@@ -409,3 +409,4 @@ header-y += msm_q6venc.h
 header-y += msm_mdp.h
 header-y += msm_vidc_dec.h
 header-y += msm_rotator.h
+header-y += ion.h
