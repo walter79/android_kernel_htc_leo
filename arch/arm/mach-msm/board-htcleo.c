@@ -624,7 +624,7 @@ static struct msm_otg_platform_data msm_otg_pdata = {
 	.se1_gating		= SE1_GATING_DISABLE,
 };
 #else
-//static int htcleo_phy_init_seq[] ={0x0C, 0x31, 0x30, 0x32, 0x1D, 0x0D, 0x1D, 0x10, -1};
+static int htcleo_phy_init_seq[] ={0x0C, 0x31, 0x30, 0x32, 0x1D, 0x0D, 0x1D, 0x10, -1};
 
 //static struct msm_otg_platform_data msm_otg_pdata = {
 //	.phy_init_seq		= htcleo_phy_init_seq,
@@ -639,6 +639,19 @@ static struct msm_hsusb_gadget_platform_data msm_gadget_pdata = {
 };
 #endif
 
+static struct msm_otg_platform_data msm_otg_pdata = {
+        .phy_init_seq                = htcleo_phy_init_seq,
+        .mode                        = USB_PERIPHERAL,
+        .otg_control                = OTG_PHY_CONTROL,
+};
+
+
+#if 0
+static struct msm_hsusb_gadget_platform_data msm_gadget_pdata = {
+        .is_phy_status_timer_on = 1,
+};
+#endif
+
 static uint32_t usb_phy_3v3_table[] =
 {
     PCOM_GPIO_CFG(HTCLEO_GPIO_USBPHY_3V3_ENABLE, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_4MA)
@@ -647,85 +660,87 @@ static uint32_t usb_phy_3v3_table[] =
 
 // modified to further reflect bravo kernel code
 static struct msm_hsusb_platform_data msm_hsusb_pdata = {
-	.phy_init_seq		= htcleo_phy_init_seq,
-	.phy_reset		= msm_hsusb_8x50_phy_reset,
-	.accessory_detect = 0, /* detect by ID pin gpio */
+        .phy_init_seq                = htcleo_phy_init_seq,
+        .phy_reset                = msm_hsusb_8x50_phy_reset,
+        .accessory_detect = 0, /* detect by ID pin gpio */
 };
 #endif
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
-	.nluns		= 1,
-	.vendor		= "HTC",
-	.product	= "HD2",
-	.release	= 0x0100,
+        .nluns                = 1,
+        .vendor                = "HTC",
+        .product        = "HD2",
+        .release        = 0x0100,
 };
 
 static struct platform_device usb_mass_storage_device = {
-	.name	= "usb_mass_storage",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &mass_storage_pdata,
-	},
+        .name        = "usb_mass_storage",
+        .id        = -1,
+        .dev        = {
+                .platform_data = &mass_storage_pdata,
+        },
 };
 
 #ifdef CONFIG_USB_ANDROID_RNDIS
 static struct usb_ether_platform_data rndis_pdata = {
-	.vendorID	= 0x0bb4,
-	.vendorDescr	= "HTC",
+        .vendorID        = 0x0bb4,
+        .vendorDescr        = "HTC",
 };
 
 static struct platform_device rndis_device = {
-	.name	= "rndis",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &rndis_pdata,
-	},
+        .name        = "rndis",
+        .id        = -1,
+        .dev        = {
+                .platform_data = &rndis_pdata,
+        },
 };
 #endif
 
 static struct android_usb_platform_data android_usb_pdata = {
-	.vendor_id	= 0x0bb4,
-	.product_id	= 0x0c02,
-	.version	= 0x0100,
-	.product_name		= "HD2",
-	.manufacturer_name	= "HTC",
-	.num_products = ARRAY_SIZE(usb_products),
-	.products = usb_products,
-	.num_functions = ARRAY_SIZE(usb_functions_all),
-	.functions = usb_functions_all,
-	.fserial_init_string = "tty:modem,tty:autobot,tty:serial,tty:autobot",
-	.nluns = 1,
-	.usb_id_pin_gpio = HTCLEO_GPIO_USB_ID_PIN,
+        .vendor_id        = 0x0bb4,
+        .product_id        = 0x0c02,
+        .version        = 0x0100,
+        .product_name                = "HD2",
+        .manufacturer_name        = "HTC",
+        .num_products = ARRAY_SIZE(usb_products),
+        .products = usb_products,
+        .num_functions = ARRAY_SIZE(usb_functions_all),
+        .functions = usb_functions_all,
 };
 
 static struct platform_device android_usb_device = {
-	.name	= "android_usb",
-	.id		= -1,
-	.dev		= {
-		.platform_data = &android_usb_pdata,
-	},
+        .name        = "android_usb",
+        .id                = -1,
+        .dev                = {
+                .platform_data = &android_usb_pdata,
+        },
 };
 static void htcleo_add_usb_devices(void)
 {
 #if 0
-	android_usb_pdata.products[0].product_id =
-		android_usb_pdata.product_id;
-	android_usb_pdata.serial_number = board_serialno();
-	msm_hsusb_pdata.serial_number = board_serialno();
-	msm_device_hsusb.dev.platform_data = &msm_hsusb_pdata;
-	config_gpio_table(usb_phy_3v3_table, ARRAY_SIZE(usb_phy_3v3_table));
-	gpio_set_value(HTCLEO_GPIO_USBPHY_3V3_ENABLE, 1);
-	platform_device_register(&msm_device_hsusb);
-	platform_device_register(&usb_mass_storage_device);
+        android_usb_pdata.products[0].product_id =
+                android_usb_pdata.product_id;
+        android_usb_pdata.serial_number = board_serialno();
+        msm_hsusb_pdata.serial_number = board_serialno();
+        msm_device_hsusb.dev.platform_data = &msm_hsusb_pdata;
+
+        platform_device_register(&msm_device_hsusb);
+#endif
+
+
+
+        platform_device_register(&usb_mass_storage_device);
 #ifdef CONFIG_USB_ANDROID_RNDIS
-	platform_device_register(&rndis_device);
+        platform_device_register(&rndis_device);
 #endif
-#endif
-//	msm_device_otg.dev.platform_data = &msm_otg_pdata;
-	//msm_device_gadget_peripheral.dev.platform_data = &msm_gadget_pdata;
-	msm_device_gadget_peripheral.dev.parent = &msm_device_otg.dev;
-	usb_gpio_init();
-	platform_device_register(&msm_device_gadget_peripheral);
-	platform_device_register(&android_usb_device);
+        config_gpio_table(usb_phy_3v3_table, ARRAY_SIZE(usb_phy_3v3_table));
+        gpio_set_value(HTCLEO_GPIO_USBPHY_3V3_ENABLE, 1);
+
+        msm_device_otg.dev.platform_data = &msm_otg_pdata;
+        //msm_device_gadget_peripheral.dev.platform_data = &msm_gadget_pdata;
+        msm_device_gadget_peripheral.dev.parent = &msm_device_otg.dev;
+        usb_gpio_init();
+        platform_device_register(&msm_device_gadget_peripheral);
+        platform_device_register(&android_usb_device);
 }
 
 unsigned htcleo_get_vbus_state(void)
