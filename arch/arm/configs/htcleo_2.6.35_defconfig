@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.35.14
-# Sun Dec 16 23:47:11 2012
+# Linux kernel version: 3.0.101 based on marc1706 2.6.35.14
+# Sun Feb 10 23:47:11 2014
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1198,13 +1198,13 @@ CONFIG_WLAN=y
 # CONFIG_HOSTAP is not set
 # CONFIG_IWM is not set
 # CONFIG_LIBERTAS is not set
-CONFIG_BCM4329=m
-CONFIG_BCM4329_FW_PATH="/system/etc/firmware/fw_bcm4329.bin"
-CONFIG_BCM4329_NVRAM_PATH="/proc/calibration"
+# CONFIG_BCM4329 is not set
 # CONFIG_BCM4329_248 is not set
 # CONFIG_BCM4329_CES is not set
 # CONFIG_BCM4330 is not set
-# CONFIG_BCMDHD is not set
+CONFIG_BCMDHD=m
+CONFIG_BCMDHD_FW_PATH="/vendor/firmware/fw_bcmdhd.bin"
+CONFIG_BCMDHD_NVRAM_PATH="/proc/calibration"
 
 
 #
@@ -1596,7 +1596,10 @@ CONFIG_S5K3E2FX=y
 #
 # Graphics support
 #
+CONFIG_ION=y
+CONFIG_ION_MSM=y
 CONFIG_MSM_KGSL=y
+CONFIG_MSM_MULTIMEDIA_USE_ION=y
 # CONFIG_MSM_KGSL_CFF_DUMP is not set
 # CONFIG_MSM_KGSL_PSTMRTMDMP_CP_STAT_NO_DETAIL is not set
 # CONFIG_MSM_KGSL_PSTMRTMDMP_NO_IB_DUMP is not set
@@ -1607,8 +1610,6 @@ CONFIG_MSM_KGSL_MMU=y
 CONFIG_MSM_KGSL_PAGE_TABLE_SIZE=0xFFF0000
 CONFIG_MSM_KGSL_MMU_PAGE_FAULT=y
 # CONFIG_MSM_KGSL_DISABLE_SHADOW_WRITES is not set
-CONFIG_ION=y
-CONFIG_ION_MSM=y
 # CONFIG_VGASTATE is not set
 CONFIG_VIDEO_OUTPUT_CONTROL=y
 CONFIG_FB=y
