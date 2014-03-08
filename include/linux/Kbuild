@@ -411,3 +411,4 @@ header-y += msm_vidc_dec.h
 header-y += msm_rotator.h
 header-y += ion.h
 header-y += msm_ion.h
+header-y += wipower.h
