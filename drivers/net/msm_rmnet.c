@@ -843,4 +843,8 @@ static int __init rmnet_init(void)
 	return 0;
 }
 
+MODULE_AUTHOR ("Sportsstar89 <sportsstar89@xda.com>");
+MODULE_DESCRIPTION ("RMNET Driver");
+MODULE_LICENSE("GPL");
+
 module_init(rmnet_init);
