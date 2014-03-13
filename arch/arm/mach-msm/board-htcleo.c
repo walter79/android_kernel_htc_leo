@@ -1195,7 +1195,6 @@ static struct platform_device android_pmem_venc_device = {
 	.dev = { .platform_data = &android_pmem_venc_pdata },
 };
 
-#define MSM_PMEM_ADSP_SIZE		0x1200000
 #define PMEM_KERNEL_EBI0_SIZE		0x0600000
 #define MSM_PMEM_AUDIO_SIZE		0x0200000
 
@@ -1208,7 +1207,7 @@ static struct platform_device ion_dev;
 #define MSM_ION_VIDC_SIZE 		0x1800000
 #endif
 #define MSM_ION_HEAP_NUM 		4
-#endif
+
 
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION

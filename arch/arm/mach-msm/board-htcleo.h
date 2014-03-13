@@ -52,7 +52,7 @@
 /* Begin EBI region */
 #define PMEM_KERNEL_EBI1_SIZE	0x00028000
 
-//#define MSM_PMEM_SF_SIZE        0x02000000
+#define MSM_PMEM_SF_SIZE        0x02000000
 
 /* MSM_RAM_CONSOLE uses the last 0x00040000 of EBI memory, defined in msm_iomap.h
 #define MSM_RAM_CONSOLE_SIZE    0x00040000
