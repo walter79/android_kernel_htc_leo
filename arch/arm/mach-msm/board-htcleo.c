@@ -1195,14 +1195,21 @@ static struct platform_device android_pmem_venc_device = {
 	.dev = { .platform_data = &android_pmem_venc_pdata },
 };
 
+#define MSM_PMEM_ADSP_SIZE		0x1200000
+#define PMEM_KERNEL_EBI0_SIZE		0x0600000
+#define MSM_PMEM_AUDIO_SIZE		0x0200000
+
+
 #ifdef CONFIG_ION_MSM
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-#define MSM_ION_HEAP_NUM 4
-#else
-#define MSM_ION_HEAP_NUM 1
+static struct platform_device ion_dev;
+#define MSM_ION_SF_SIZE			MSM_PMEM_SF_SIZE
+#define MSM_ION_AUDIO_SIZE		MSM_PMEM_AUDIO_SIZE
+#ifdef CONFIG_MSM_ADSP_USE_PMEM
+#define MSM_ION_VIDC_SIZE 		0x1800000
 #endif
-#define MSM_ION_SF_SIZE 0x2000000
-#define MSM_ION_AUDIO_SIZE 0x20000
+#define MSM_ION_HEAP_NUM 		4
+#endif
+
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 static struct ion_co_heap_pdata co_ion_pdata = {
@@ -1705,15 +1712,12 @@ static struct memtype_reserve qsd8x50_reserve_table[] __initdata = {
 };
 
 unsigned long size;
-unsigned long msm_ion_camera_size;
+unsigned long msm_ion_camera_size = MSM_ION_VIDC_SIZE;
 
 static void fix_sizes(void)
 {
 	size = pmem_adsp_size;
 
-#ifdef CONFIG_ION_MSM
-	msm_ion_camera_size = size;
-#endif
 }
 
 static void __init size_pmem_device(struct android_pmem_platform_data *pdata, unsigned long start, unsigned long size)
@@ -1726,17 +1730,17 @@ static void __init size_pmem_device(struct android_pmem_platform_data *pdata, un
 static void __init size_pmem_devices(void)
 {
 #ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_ION_MSM
-	size_pmem_device(&android_pmem_adsp_pdata, 0, pmem_adsp_size);
-	size_pmem_device(&android_pmem_pdata, 0, pmem_mdp_size);
-	size_pmem_device(&android_pmem_venc_pdata, 0, pmem_venc_size);
-	qsd8x50_reserve_table[MEMTYPE_EBI1].size += PMEM_KERNEL_EBI1_SIZE;
+#ifdef CONFIG_MSM_ADSP_USE_PMEM
+        android_pmem_adsp_pdata.size = size;
+#endif
+#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
+        android_pmem_pdata.size = pmem_sf_size;
 #endif
 #endif
 }
 
 #ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
+#if !defined(CONFIG_MSM_MULTIMEDIA_USE_ION) || defined(CONFIG_MSM_ADSP_USE_PMEM)
 static void __init reserve_memory_for(struct android_pmem_platform_data *p)
 {
 	//qsd8x50_reserve_table[p->memory_type].size += p->size;
@@ -1749,9 +1753,13 @@ static void __init reserve_memory_for(struct android_pmem_platform_data *p)
 static void __init reserve_pmem_memory(void)
 {
 #ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
+#if !defined(CONFIG_MSM_MULTIMEDIA_USE_ION) || defined(CONFIG_MSM_ADSP_USE_PMEM)
 	reserve_memory_for(&android_pmem_adsp_pdata);
-	reserve_memory_for(&android_pmem_pdata);
+        ;
+#endif
+#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION	
+        reserve_memory_for(&android_pmem_pdata);
+        qsd8x50_reserve_table[MEMTYPE_EBI0].size += pmem_kernel_ebi0_size
 #endif
 #endif
 }
@@ -1771,6 +1779,7 @@ static void __init reserve_ion_memory(void)
 	qsd8x50_reserve_table[MEMTYPE_EBI1].size += msm_ion_camera_size;
 	qsd8x50_reserve_table[MEMTYPE_EBI1].size += MSM_ION_AUDIO_SIZE;
 	qsd8x50_reserve_table[MEMTYPE_EBI1].size += MSM_ION_SF_SIZE;
+        qsd8x50_reserve_table[MEMTYPE_EBI0].size += 1;
 #endif
 }
 
