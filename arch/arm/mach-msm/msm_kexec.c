@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -8,14 +8,23 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
  */
 
-#ifndef __ADRENO_POSTMORTEM_H
-#define __ADRENO_POSTMORTEM_H
+#include <linux/kexec.h>
+#include <linux/io.h>
 
-struct kgsl_device;
+#ifdef CONFIG_MSM_WATCHDOG
+#include <mach/msm_iomap.h>
 
-int adreno_postmortem_dump(struct kgsl_device *device, int manual);
+#define WDT0_EN        (MSM_TMR_BASE + 0x40)
+#endif
 
-#endif 
+void arch_kexec(void)
+{
+#ifdef CONFIG_MSM_WATCHDOG
+	/* Prevent watchdog from resetting SoC */
+	writel(0, WDT0_EN);
+	pr_crit("KEXEC: MSM Watchdog Exit - Deactivated\n");
+#endif
+	return;
+}

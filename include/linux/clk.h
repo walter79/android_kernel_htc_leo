@@ -197,5 +197,28 @@ struct clk *clk_get_sys(const char *dev_id, const char *con_id);
  */
 int clk_add_alias(const char *alias, const char *alias_dev_name, char *id,
 			struct device *dev);
+static inline void clk_disable_unprepare(struct clk *clk)
+{
+	clk_disable(clk);
+	clk_unprepare(clk);
+}
 
+int clk_enable(struct clk *clk);
+
+void clk_disable(struct clk *clk);
+
+
+static inline int clk_prepare_enable(struct clk *clk)
+{
+	int ret;
+
+	ret = clk_prepare(clk);
+	if (ret)
+		return ret;
+	ret = clk_enable(clk);
+	if (ret)
+		clk_unprepare(clk);
+
+	return ret;
+}
 #endif

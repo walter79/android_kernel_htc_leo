@@ -19,6 +19,11 @@
 #define DEVICE_2D0_NAME "kgsl-2d0"
 #define DEVICE_2D1_NAME "kgsl-2d1"
 
+#define Z180_DEFAULT_PWRSCALE_POLICY  NULL
+
+/* Wait a maximum of 10 seconds when trying to idle the core */
+#define Z180_IDLE_TIMEOUT (10 * 1000)
+
 struct z180_ringbuffer {
 	unsigned int prevctx;
 	struct kgsl_memdesc      cmdbufdesc;

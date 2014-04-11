@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -70,10 +70,8 @@ static void idlestats_get_sample(struct msm_idle_stats_device *idledev,
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 
 	mutex_lock(&device->mutex);
-	/* If the GPU is asleep, don't wake it up - assume that we
-	   are idle */
 
-	if (!(device->state & (KGSL_STATE_SLEEP | KGSL_STATE_NAP))) {
+	if (device->state == KGSL_STATE_ACTIVE) {
 		device->ftbl->power_stats(device, &stats);
 		pulse->busy_start_time = pwr->time - stats.busy_time;
 		pulse->busy_interval = stats.busy_time;
@@ -89,11 +87,12 @@ static void idlestats_busy(struct kgsl_device *device,
 			struct kgsl_pwrscale *pwrscale)
 {
 	struct idlestats_priv *priv = pwrscale->priv;
+	struct kgsl_power_stats stats;
 	int i, busy, nr_cpu = 1;
 
 	if (priv->pulse.busy_start_time != 0) {
 		priv->pulse.wait_interval = 0;
-		/* Calculate the total CPU busy time for this GPU pulse */
+		
 		for (i = 0; i < num_possible_cpus(); i++) {
 			spin_lock(&priv->cpu_info.lock);
 			if (cpu_online(i)) {
@@ -102,7 +101,7 @@ static void idlestats_busy(struct kgsl_device *device,
 						get_cpu_idle_time_us(i, NULL);
 				busy = priv->cpu_info.end[i] -
 						priv->cpu_info.start[i];
-				/* Normalize the busy time by frequency */
+				
 				busy = priv->cpu_info.curr_freq[i] *
 					(busy / priv->cpu_info.max_freq[i]);
 				priv->pulse.wait_interval += busy;
@@ -111,6 +110,15 @@ static void idlestats_busy(struct kgsl_device *device,
 			spin_unlock(&priv->cpu_info.lock);
 		}
 		priv->pulse.wait_interval /= nr_cpu;
+
+		device->ftbl->power_stats(device, &stats);
+
+		if (stats.total_time == 0) {
+			priv->pulse.busy_start_time = 0;
+			return;
+		}
+
+		priv->pulse.busy_interval = stats.busy_time;
 		msm_idle_stats_idle_end(&priv->idledev, &priv->pulse);
 	}
 	priv->pulse.busy_start_time = ktime_to_us(ktime_get());
@@ -120,21 +128,8 @@ static void idlestats_idle(struct kgsl_device *device,
 			struct kgsl_pwrscale *pwrscale)
 {
 	int i, nr_cpu;
-	struct kgsl_power_stats stats;
 	struct idlestats_priv *priv = pwrscale->priv;
 
-	/* This is called from within a mutex protected function, so
-	   no additional locking required */
-	device->ftbl->power_stats(device, &stats);
-
-	/* If total_time is zero, then we don't have
-	   any interesting statistics to store */
-	if (stats.total_time == 0) {
-		priv->pulse.busy_start_time = 0;
-		return;
-	}
-
-	priv->pulse.busy_interval   = stats.busy_time;
 	nr_cpu = num_possible_cpus();
 	for (i = 0; i < nr_cpu; i++)
 		if (cpu_online(i))
@@ -149,7 +144,14 @@ static void idlestats_sleep(struct kgsl_device *device,
 			struct kgsl_pwrscale *pwrscale)
 {
 	struct idlestats_priv *priv = pwrscale->priv;
-	priv->idledev.stats->event |= MSM_IDLE_STATS_EVENT_IDLE_TIMER_EXPIRED;
+	msm_idle_stats_update_event(&priv->idledev,
+		MSM_IDLE_STATS_EVENT_IDLE_TIMER_EXPIRED);
+}
+
+static void idlestats_wake(struct kgsl_device *device,
+			struct kgsl_pwrscale *pwrscale)
+{
+	kgsl_pwrctrl_pwrlevel_change(device, KGSL_PWRLEVEL_TURBO);
 }
 
 static int idlestats_init(struct kgsl_device *device,
@@ -217,5 +219,6 @@ struct kgsl_pwrscale_policy kgsl_pwrscale_policy_idlestats = {
 	.idle = idlestats_idle,
 	.busy = idlestats_busy,
 	.sleep = idlestats_sleep,
+	.wake = idlestats_wake,
 	.close = idlestats_close
 };
