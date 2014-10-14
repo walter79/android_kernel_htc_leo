@@ -474,6 +474,8 @@ int battery_charging_ctrl(enum batt_ctl_t ctl)
 
 	if (!htc_gpio_initial)
 		init_batt_gpio();
+	
+	notify_vbus_change_intr();
 
 	switch (ctl) {
 	case DISABLE:
