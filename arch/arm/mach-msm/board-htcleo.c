@@ -43,6 +43,9 @@
 #include <asm/mach/map.h>
 #include <asm/setup.h>
 
+#include <mach/dma.h>
+#include <mach/msm_spi.h>
+
 #include <mach/board.h>
 #include <mach/board_htc.h>
 #include <mach/hardware.h>
@@ -74,6 +77,8 @@
 #include "board-htcleo.h"
 #include "devices.h"
 #include "proc_comm.h"
+#include "timer.h"
+#include "irq.h"
 #include "dex_comm.h"
 #include "footswitch.h"
 #include "pm.h"
@@ -86,6 +91,7 @@ struct tag_magldr_entry
      _Bool fNoNandBoot;
 };
 
+extern void notify_usb_connected(int);
 extern int __init htcleo_init_mmc(unsigned debug_uart);
 extern void __init htcleo_audio_init(void);
 extern unsigned char *get_bt_bd_ram(void);
@@ -693,7 +699,7 @@ static struct android_usb_platform_data android_usb_pdata = {
 	.products = usb_products,
 	.num_functions = ARRAY_SIZE(usb_functions_all),
 	.functions = usb_functions_all,
-	.fserial_init_string = "tty:modem,tty:autobot,tty:serial,tty:autobot",
+	.fserial_init_string = "tty:modem,tty:autobot,tty:serial",
 	.nluns = 1,
 	.usb_id_pin_gpio = HTCLEO_GPIO_USB_ID_PIN,
 };
@@ -1133,27 +1139,51 @@ unsigned msm_num_footswitch_devices = ARRAY_SIZE(msm_footswitch_devices);
 ///////////////////////////////////////////////////////////////////////
 #define MSM_AUDIO_SIZE		0x80000
 
-#ifdef CONFIG_KERNEL_PMEM_SMI_REGION
-
-static struct android_pmem_platform_data android_pmem_kernel_smi_pdata = {
-	.name = PMEM_KERNEL_SMI_DATA_NAME,
-	/* if no allocator_type, defaults to PMEM_ALLOCATORTYPE_BITMAP,
-	 * the only valid choice at this time. The board structure is
-	 * set to all zeros by the C runtime initialization and that is now
-	 * the enum value of PMEM_ALLOCATORTYPE_BITMAP, now forced to 0 in
-	 * include/linux/android_pmem.h.
-	 */
-	.cached = 0,
-};
-
-#endif
-
+/* pmem heaps */
+#ifndef CONFIG_ION_MSM
 static struct android_pmem_platform_data android_pmem_pdata = {
 	.name = "pmem",
 	.allocator_type = PMEM_ALLOCATORTYPE_ALLORNOTHING,
 	.cached = 1,
 	.memory_type = MEMTYPE_EBI1,
 };
+#endif
+
+/* ion heaps */
+#ifdef CONFIG_ION_MSM
+#define MSM_ION_SF_SIZE 0x2000000
+static struct ion_co_heap_pdata co_ion_pdata = {
+        .adjacent_mem_id = INVALID_HEAP_ID,
+        .align = PAGE_SIZE,
+};
+
+static struct ion_platform_data ion_pdata = {
+        .nr = 2,
+        .heaps = {
+                {
+                        .id        = ION_SYSTEM_HEAP_ID,
+                        .type        = ION_HEAP_TYPE_SYSTEM,
+                        .name        = ION_VMALLOC_HEAP_NAME,
+                },
+                /* PMEM_MDP = SF */
+                {
+                        .id        = ION_SF_HEAP_ID,
+                        .type        = ION_HEAP_TYPE_CARVEOUT,
+                        .name        = ION_SF_HEAP_NAME,
+                        .memory_type = ION_EBI_TYPE,
+                        .has_outer_cache = 1,
+                        .extra_data = (void *)&co_ion_pdata,
+                },
+        }
+};
+
+static struct platform_device ion_dev = {
+        .name = "ion-msm",
+        .id = 1,
+        .dev = { .platform_data = &ion_pdata },
+};
+#endif
+/* end ion heaps */
 
 static struct android_pmem_platform_data android_pmem_adsp_pdata = {
 	.name = "pmem_adsp",
@@ -1162,101 +1192,19 @@ static struct android_pmem_platform_data android_pmem_adsp_pdata = {
 	.memory_type = MEMTYPE_EBI1,
 };
 
-static struct android_pmem_platform_data android_pmem_venc_pdata = {
-	.name = "pmem_venc",
-	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
-	.cached = 1,
-	.memory_type = MEMTYPE_EBI1,
-};
-
+#ifndef CONFIG_ION_MSM
 static struct platform_device android_pmem_device = {
 	.name = "android_pmem",
 	.id = 0,
 	.dev = { .platform_data = &android_pmem_pdata },
 };
+#endif
 
 static struct platform_device android_pmem_adsp_device = {
 	.name = "android_pmem",
 	.id = 1,
 	.dev = { .platform_data = &android_pmem_adsp_pdata },
 };
-
-#ifdef CONFIG_KERNEL_PMEM_SMI_REGION
-static struct platform_device android_pmem_kernel_smi_device = {
-	.name = "android_pmem",
-	.id = 4,
-	.dev = { .platform_data = &android_pmem_kernel_smi_pdata },
-};
-#endif
-
-static struct platform_device android_pmem_venc_device = {
-	.name = "android_pmem",
-	.id = 5,
-	.dev = { .platform_data = &android_pmem_venc_pdata },
-};
-
-#ifdef CONFIG_ION_MSM
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-#define MSM_ION_HEAP_NUM 4
-#else
-#define MSM_ION_HEAP_NUM 1
-#endif
-#define MSM_ION_SF_SIZE 0x2000000
-#define MSM_ION_AUDIO_SIZE 0x20000
-
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-static struct ion_co_heap_pdata co_ion_pdata = {
-.adjacent_mem_id = INVALID_HEAP_ID,
-.align = PAGE_SIZE,
-};
-#endif
-
-static struct ion_platform_data ion_pdata = {
-	.nr = MSM_ION_HEAP_NUM,
-	.heaps = {
-		{
-			.id     = ION_SYSTEM_HEAP_ID,
-			.type   = ION_HEAP_TYPE_SYSTEM,
-			.name   = ION_VMALLOC_HEAP_NAME,
-		},
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-		/* PMEM_ADSP = CAMERA  */
-		{
-			.id     = ION_CAMERA_HEAP_ID,
-			.type   = ION_HEAP_TYPE_CARVEOUT,
-			.name   = ION_CAMERA_HEAP_NAME,
-			.memory_type = ION_EBI_TYPE,
-			.has_outer_cache = 1,
-			.extra_data = (void *)&co_ion_pdata,
-		},   
-		/* PMEM_AUDIO */
-		{
-			.id     = ION_AUDIO_HEAP_ID,
-			.type   = ION_HEAP_TYPE_CARVEOUT,
-			.name   = ION_AUDIO_HEAP_NAME,
-			.memory_type = ION_EBI_TYPE,
-			.has_outer_cache = 1,
-			.extra_data = (void *)&co_ion_pdata,
-		},
-		/* PMEM_MDP = SF */
-		{
-			.id     = ION_SF_HEAP_ID,
-			.type   = ION_HEAP_TYPE_CARVEOUT,
-			.name   = ION_SF_HEAP_NAME,
-			.memory_type = ION_EBI_TYPE,
-			.has_outer_cache = 1,
-			.extra_data = (void *)&co_ion_pdata,
-		},
-#endif
-	}
-};
-
-static struct platform_device ion_dev = {
-	.name = "ion-msm",
-	.id = 1,
-	.dev = { .platform_data = &ion_pdata },
-};
-#endif
 
 ///////////////////////////////////////////////////////////////////////
 // RAM-Console
@@ -1513,6 +1461,13 @@ static struct platform_device *devices[] __initdata =
 #else
 	&ion_dev,
 #endif
+	&android_pmem_adsp_device,
+#ifdef CONFIG_USB_G_ANDROID
+	&usb_mass_storage_device,
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	&rndis_device,
+#endif
+#endif
 	&msm_device_i2c,
 	&htc_battery_pdev,
 	&ds2746_battery_pdev,
@@ -1619,6 +1574,8 @@ static struct msm_acpu_clock_platform_data htcleo_clock_data = {
 //	.wait_for_irq_khz	= 19200,   // TCXO
 };
 */
+
+#ifdef CONFIG_PERFLOCK
 static unsigned htcleo_perf_acpu_table[] = {
 	245000000,
 	576000000,
@@ -1629,6 +1586,89 @@ static struct perflock_platform_data htcleo_perflock_data = {
 	.perf_acpu_table = htcleo_perf_acpu_table,
 	.table_size = ARRAY_SIZE(htcleo_perf_acpu_table),
 };
+#endif
+
+#define CT_CSR_PHYS		0xA8700000
+#define TCSR_SPI_MUX		(ct_csr_base + 0x54)
+static int msm_qsd_spi_dma_config(void)
+{
+	void __iomem *ct_csr_base = 0;
+	u32 spi_mux;
+	int ret = 0;
+
+	ct_csr_base = ioremap(CT_CSR_PHYS, PAGE_SIZE);
+	if (!ct_csr_base) {
+		pr_err("%s: Could not remap %x\n", __func__, CT_CSR_PHYS);
+		return -1;
+	}
+
+	spi_mux = readl(TCSR_SPI_MUX);
+	switch (spi_mux) {
+	case (1):
+		qsd_spi_resources[4].start  = DMOV_HSUART1_RX_CHAN;
+		qsd_spi_resources[4].end    = DMOV_HSUART1_TX_CHAN;
+		qsd_spi_resources[5].start  = DMOV_HSUART1_RX_CRCI;
+		qsd_spi_resources[5].end    = DMOV_HSUART1_TX_CRCI;
+		break;
+	case (2):
+		qsd_spi_resources[4].start  = DMOV_HSUART2_RX_CHAN;
+		qsd_spi_resources[4].end    = DMOV_HSUART2_TX_CHAN;
+		qsd_spi_resources[5].start  = DMOV_HSUART2_RX_CRCI;
+		qsd_spi_resources[5].end    = DMOV_HSUART2_TX_CRCI;
+		break;
+	case (3):
+		qsd_spi_resources[4].start  = DMOV_CE_OUT_CHAN;
+		qsd_spi_resources[4].end    = DMOV_CE_IN_CHAN;
+		qsd_spi_resources[5].start  = DMOV_CE_OUT_CRCI;
+		qsd_spi_resources[5].end    = DMOV_CE_IN_CRCI;
+		break;
+	default:
+		ret = -1;
+	}
+
+	iounmap(ct_csr_base);
+	return ret;
+}
+
+static uint32_t qsd_spi_gpio_config_data[] = {
+	PCOM_GPIO_CFG(17, 1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+	PCOM_GPIO_CFG(18, 1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+	PCOM_GPIO_CFG(19, 1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+	PCOM_GPIO_CFG(20, 1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+	PCOM_GPIO_CFG(21, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_16MA),
+};
+
+static int msm_qsd_spi_gpio_config(void)
+{
+	config_gpio_table(qsd_spi_gpio_config_data,
+		ARRAY_SIZE(qsd_spi_gpio_config_data));
+
+	/* Set direction for SPI_PWR */
+	gpio_direction_output(21, 1);
+
+	return 0;
+}
+
+static void msm_qsd_spi_gpio_release(void)
+{
+}
+
+static struct msm_spi_platform_data qsd_spi_pdata = {
+	.max_clock_speed = 19200000,
+	.gpio_config  = msm_qsd_spi_gpio_config,
+	.gpio_release = msm_qsd_spi_gpio_release,
+	.dma_config = msm_qsd_spi_dma_config,
+};
+
+static void __init msm_qsd_spi_init(void)
+{
+	int rc;
+	rc = gpio_request(21, "spi_pwr");
+	if (rc)
+		pr_err("Failed requesting spi_pwr gpio\n");
+	qsd_device_spi.dev.platform_data = &qsd_spi_pdata;
+}
+
 ///////////////////////////////////////////////////////////////////////
 // Reset
 ///////////////////////////////////////////////////////////////////////
@@ -1669,6 +1709,7 @@ static void __init htcleo_blink_camera_led(void){
 }
 #endif // CONFIG_HTCLEO_BLINK_ON_BOOT
 
+#ifndef CONFIG_ION_MSM
 static unsigned pmem_mdp_size = MSM_PMEM_MDP_SIZE;
 static int __init pmem_mdp_size_setup(char *p)
 {
@@ -1676,6 +1717,7 @@ static int __init pmem_mdp_size_setup(char *p)
 	return 0;
 }
 early_param("pmem_mdp_size", pmem_mdp_size_setup);
+#endif
 
 static unsigned pmem_venc_size = MSM_PMEM_VENC_SIZE;
 static int __init pmem_venc_size_setup(char *p)
@@ -1704,18 +1746,6 @@ static struct memtype_reserve qsd8x50_reserve_table[] __initdata = {
 	},
 };
 
-unsigned long size;
-unsigned long msm_ion_camera_size;
-
-static void fix_sizes(void)
-{
-	size = pmem_adsp_size;
-
-#ifdef CONFIG_ION_MSM
-	msm_ion_camera_size = size;
-#endif
-}
-
 static void __init size_pmem_device(struct android_pmem_platform_data *pdata, unsigned long start, unsigned long size)
 {
 	pdata->size = size;
@@ -1725,62 +1755,52 @@ static void __init size_pmem_device(struct android_pmem_platform_data *pdata, un
 
 static void __init size_pmem_devices(void)
 {
-#ifdef CONFIG_ANDROID_PMEM
 #ifndef CONFIG_ION_MSM
-	size_pmem_device(&android_pmem_adsp_pdata, 0, pmem_adsp_size);
 	size_pmem_device(&android_pmem_pdata, 0, pmem_mdp_size);
-	size_pmem_device(&android_pmem_venc_pdata, 0, pmem_venc_size);
-	qsd8x50_reserve_table[MEMTYPE_EBI1].size += PMEM_KERNEL_EBI1_SIZE;
 #endif
+#ifdef CONFIG_ANDROID_PMEM
+	size_pmem_device(&android_pmem_adsp_pdata, 0, pmem_adsp_size);
+	qsd8x50_reserve_table[MEMTYPE_EBI1].size += PMEM_KERNEL_EBI1_SIZE;
 #endif
 }
 
-#ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
 static void __init reserve_memory_for(struct android_pmem_platform_data *p)
 {
 	//qsd8x50_reserve_table[p->memory_type].size += p->size;
 	pr_info("%s: reserve %lu bytes from memory %d for %s.\n", __func__, p->size, p->memory_type, p->name);
 	qsd8x50_reserve_table[p->memory_type].size += p->size;
 }
-#endif
-#endif
 
 static void __init reserve_pmem_memory(void)
 {
 #ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
 	reserve_memory_for(&android_pmem_adsp_pdata);
-	reserve_memory_for(&android_pmem_pdata);
 #endif
+#ifndef CONFIG_ION_MSM
+        reserve_memory_for(&android_pmem_pdata);
 #endif
 }
 
+#ifdef CONFIG_ION_MSM
 static void __init size_ion_devices(void)
 {
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-	ion_pdata.heaps[1].size = msm_ion_camera_size;
-	ion_pdata.heaps[2].size = MSM_ION_AUDIO_SIZE;
-	ion_pdata.heaps[3].size = MSM_ION_SF_SIZE;
-#endif
+	ion_pdata.heaps[1].size = MSM_ION_SF_SIZE;
 }
 
 static void __init reserve_ion_memory(void)
 {
-#if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
-	qsd8x50_reserve_table[MEMTYPE_EBI1].size += msm_ion_camera_size;
-	qsd8x50_reserve_table[MEMTYPE_EBI1].size += MSM_ION_AUDIO_SIZE;
 	qsd8x50_reserve_table[MEMTYPE_EBI1].size += MSM_ION_SF_SIZE;
-#endif
 }
+#endif
 
 static void __init qsd8x50_calculate_reserve_sizes(void)
 {
 	size_pmem_devices();
 	reserve_pmem_memory();
-	fix_sizes();
+#ifdef CONFIG_ION_MSM
 	size_ion_devices();
 	reserve_ion_memory();
+#endif
 }
 
 static int qsd8x50_paddr_to_memtype(unsigned int paddr)
@@ -1836,6 +1856,7 @@ static void __init htcleo_init(void)
 	htcleo_audio_init();
 
 	msm_device_i2c_init();
+	msm_qsd_spi_init();
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 
@@ -1876,7 +1897,6 @@ static void __init htcleo_fixup(struct machine_desc *desc, struct tag *tags,
 	/* Blink the camera LED shortly to show that we're alive! */
 	mi->nr_banks = 1;
 	mi->bank[0].start = MSM_EBI1_BANK0_BASE;
-	//mi->bank[0].node = PHYS_TO_NID(MSM_EBI1_BANK0_BASE);
 	mi->bank[0].size = MSM_EBI1_BANK0_SIZE;
 }
 
@@ -1934,7 +1954,7 @@ MACHINE_START(HTCLEO, "htcleo")
 	.boot_params	= (CONFIG_PHYS_OFFSET + 0x00000100),
 	.fixup		= htcleo_fixup,
 	.map_io		= htcleo_map_io,
-    	.reserve	= qsd8x50_reserve,
+    .reserve	= qsd8x50_reserve,
 	.init_irq	= msm_init_irq,
 	.init_machine	= htcleo_init,
 	.timer		= &msm_timer,
