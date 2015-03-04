@@ -973,12 +973,12 @@ static struct msm_pm_platform_data msm_pm_data[MSM_PM_SLEEP_MODE_NR] = {
 		.residency = 23740,
 	},
 
-	[MSM_PM_SLEEP_MODE_POWER_COLLAPSE_NO_XO_SHUTDOWN] = {
+	[MSM_PM_SLEEP_MODE_POWER_COLLAPSE_STANDALONE] = {
 		.idle_supported = 1,
 		.suspend_supported = 1,
 		.idle_enabled = 1,
 		.suspend_enabled = 1,
-		.latency = 4594,
+		.latency = 8594,
 		.residency = 23740,
 	},
 
