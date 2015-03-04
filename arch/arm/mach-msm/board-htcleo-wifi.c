@@ -277,6 +277,7 @@ static struct wifi_platform_data htcleo_wifi_control = {
 	.set_power      = htcleo_wifi_power,
 	.set_reset      = htcleo_wifi_reset,
 	.set_carddetect = htcleo_wifi_set_carddetect,
+	.get_country_code = htcleo_wifi_get_country_code,
 #if (!defined(CONFIG_BCMDHD) || defined(CONFIG_DHD_USE_STATIC_BUF))
 	.mem_prealloc   = htcleo_wifi_mem_prealloc,
 #else
